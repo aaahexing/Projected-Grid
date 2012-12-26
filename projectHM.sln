@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 11.00
+# Visual Studio 2010
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "projectHM", "projectHM\projectHM.vcxproj", "{B76F619D-6D9D-45AE-8F22-AC82309FE301}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E83FB9B2-7A74-4611-80EF-96407419326D} = {E83FB9B2-7A74-4611-80EF-96407419326D}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hxlib", "hxlib\hxlib.vcxproj", "{E83FB9B2-7A74-4611-80EF-96407419326D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B76F619D-6D9D-45AE-8F22-AC82309FE301}.Debug|Win32.ActiveCfg = Debug|Win32
+		{B76F619D-6D9D-45AE-8F22-AC82309FE301}.Debug|Win32.Build.0 = Debug|Win32
+		{B76F619D-6D9D-45AE-8F22-AC82309FE301}.Release|Win32.ActiveCfg = Release|Win32
+		{B76F619D-6D9D-45AE-8F22-AC82309FE301}.Release|Win32.Build.0 = Release|Win32
+		{E83FB9B2-7A74-4611-80EF-96407419326D}.Debug|Win32.ActiveCfg = Debug|Win32
+		{E83FB9B2-7A74-4611-80EF-96407419326D}.Debug|Win32.Build.0 = Debug|Win32
+		{E83FB9B2-7A74-4611-80EF-96407419326D}.Release|Win32.ActiveCfg = Release|Win32
+		{E83FB9B2-7A74-4611-80EF-96407419326D}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

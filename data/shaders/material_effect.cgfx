@@ -1,0 +1,213 @@
+uniform float4x4 model_view_projection	: state.matrix.mvp;
+uniform float4x4 model_view				: state.matrix.modelview;
+// The Cg's document is not so credible
+uniform float4x4 model_view_invtrans	: state.matrix.modelview.invtrans;
+
+struct AppData {
+	float3 position		: POSITION;
+	float3 normal		: NORMAL;
+};
+
+struct VertexOutput {
+	float4 h_position	: POSITION;
+	float3 view_normal	: TEXCOORD1;
+	float4 view_position: TEXCOORD2;
+};
+
+// --------------------------------------------------
+// vertex shader for all
+// --------------------------------------------------
+
+VertexOutput std_VS(AppData IN) {
+	VertexOutput OUT;
+	float4 Po = float4(IN.position, 1);
+	float4 No = float4(IN.normal, 0);
+	OUT.h_position = mul(model_view_projection, Po);
+	OUT.view_normal = normalize(mul(model_view_invtrans, No).xyz);
+	//OUT.view_normal = IN.normal;
+	OUT.view_position = mul(model_view, Po);
+	return OUT;
+}
+
+// --------------------------------------------------
+// consts used for lighting
+// --------------------------------------------------
+const float fe = 2.71828182845904523536;					// Euler number
+
+// --------------------------------------------------
+// Helper function to retrieve angle between
+// two NORMALIZED vectors in Rad
+// --------------------------------------------------
+float GetDiffAngle(float3 v1, float3 v2) {
+	return acos(dot(v1, v2));
+}
+
+// --------------------------------------------------
+// Diffuse term
+// --------------------------------------------------
+float4 calcDiffuse(float4 light_diffuse,
+				   float4 mat_diffuse,
+				   float3 V,
+				   float3 N) {
+	float fLambert = max(dot(V, N), 0);
+	return fLambert * (light_diffuse * mat_diffuse);
+}
+
+// --------------------------------------------------
+// Specular term (Phone)
+// --------------------------------------------------
+float4 calcSpecularPhone(float4 light_specular,
+						 float4 mat_specular,
+						 float shininess,
+						 float3 V,
+						 float3 N,
+						 float3 vertex) {
+	float3 vRefl = reflect(V, N);
+	float fSpec = pow(max(dot(vRefl, vertex), 0), shininess);
+	return fSpec * (light_specular * mat_specular);
+}
+
+// --------------------------------------------------
+// Specular term (Blinn)
+// --------------------------------------------------
+float4 calcSpecularBlinn(float4 light_specular,
+						 float4 mat_specular,
+						 float shininess,
+						 float3 L,
+						 float3 N,
+						 float3 vertex) {
+	float3 vHalf = normalize(L + -vertex);
+	float fSpec = pow(max(dot(N, vHalf), 0.0), shininess);
+	return fSpec * (light_specular * mat_specular);
+}
+
+// --------------------------------------------------
+// Specular term (Cook-Torrance)
+// --------------------------------------------------
+float4 calcSpecularCookTorrance(float4 light_specular,
+								float4 mat_specular,
+								float3 L,
+								float3 N,
+								float3 V) {
+	// Lambda for the Fresnel-Term
+	float fLambda = 0.8;	// shininess
+	
+	float3 E = -V;
+	float fEDotN = dot(E, N);
+	float3 vHalf = normalize(L - V);
+	float fNDotH = dot(N, vHalf);
+	
+	// calculate D
+	float fSurfaceSmoothness = 0.075;
+	float fDivisor = 4.0*fSurfaceSmoothness*fNDotH*fNDotH*fNDotH*fNDotH;
+	float fExponent = tan(GetDiffAngle(N, vHalf)) / fSurfaceSmoothness;
+	fExponent *= fExponent;
+	float fD = (pow(fe, -fExponent)) / fDivisor;
+	
+	// calculate F (using the Schlick-term):
+	//float fF = pow((1.0 + fEDotN), fLambda);		// that looks so bad!!!
+	float fF = fLambda + ((1.0-fLambda)*pow(1.0 - dot(E, vHalf),5.0));
+	
+	// calculate G:
+	float fEDotH_Rec = 1.0 / dot(E, vHalf);
+	float fG1 = 2.0*fNDotH*fEDotN*fEDotH_Rec;
+	float fG2 = 2.0*fNDotH*(max(dot(L, N),0.0))*fEDotH_Rec;
+	float fG = min(max(min(fG1, fG2), 0.0), 1.0);
+	
+	// all in all:
+	float fSpec = (fD*fF*fG)/(fEDotN);
+	return fSpec * (light_specular * mat_specular);
+}
+
+#define PHONE_SHADING			0
+#define BLINN_SHADING			1
+#define COOK_TORRANCE_SHADING	2
+#define POSITION_COLOR 			3
+#define NORMAL_COLOR			4
+
+// Material uniforms
+uniform float mat_shininess = 12.8f;
+uniform float4 mat_diffuse = float4(0.54f, 0.89f, 0.063f, 1.f);
+uniform float4 mat_specular = float4(0.316228f, 0.316228f, 0.316228f, 1.f);
+
+// --------------------------------------------------
+// Shading fragment shader
+// --------------------------------------------------
+float4 shading_FS(uniform int lightingModel, VertexOutput IN) : COLOR {
+	if (lightingModel == POSITION_COLOR) {
+		return float4(IN.view_position);
+	} else if (lightingModel == NORMAL_COLOR) {
+		return float4(IN.view_normal, 1);
+	} else {
+		// Calculate lighting
+		// @hack : the light's position and color, eyes' position
+		float4 light_color = float4(1, 1, 1, 1);
+		float3 light_position = float3(100, 100, 100);
+
+		float3 N = normalize(IN.view_normal);
+		float3 obj_position = IN.view_position.xyz;
+		// Light vector
+		float3 L = normalize(light_position - obj_position);
+		float3 V = normalize(obj_position);
+		
+		float4 diffuse_color = calcDiffuse(light_color,
+										   mat_diffuse,
+										   L,
+										   N);
+										  
+		float4 specular_color = float4(0.f, 0.f, 0.f, 1.f);
+		if (lightingModel == PHONE_SHADING) {
+			specular_color = calcSpecularPhone(light_color,
+											   mat_specular,
+											   mat_shininess,
+											   L,
+											   N,
+											   V);
+		} else if (lightingModel == BLINN_SHADING) {
+			specular_color = calcSpecularBlinn(light_color,
+											   mat_specular,
+											   mat_shininess,
+											   L,
+											   N,
+											   V);
+		} else if (lightingModel == COOK_TORRANCE_SHADING) {
+			specular_color = calcSpecularCookTorrance(light_color,
+													  mat_specular,
+													  L,
+													  N,
+													  V);		
+		}
+		
+		return diffuse_color + specular_color;
+	}
+}
+
+const float4 wireframe_color = float4(0.9f, 0.9f, 0.9f, 0.9f);
+
+// --------------------------------------------------
+// Wireframe fragment shader
+// --------------------------------------------------
+float4 wireframe_FS(VertexOutput IN) : COLOR {
+	return wireframe_color;
+}
+
+technique cgfx_cookTorrance_shading {
+	pass {
+		VertexProgram = compile vp40 std_VS();
+		FragmentProgram = compile fp40 shading_FS(COOK_TORRANCE_SHADING);
+	}
+}
+
+technique cgfx_cookTorrance_shading_wireframe {
+	pass {
+		PolygonOffsetFillEnable = true;
+		PolygonOffset = float2(1.f, 1.f);
+		VertexProgram = compile vp40 std_VS();
+		FragmentProgram = compile fp40 shading_FS(COOK_TORRANCE_SHADING);
+	}
+	pass {
+		PolygonMode = int2(FrontAndBack, Line);
+		VertexProgram = compile vp40 std_VS();
+		FragmentProgram = compile fp40 wireframe_FS();
+	}
+}
