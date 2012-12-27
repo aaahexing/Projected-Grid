@@ -89,6 +89,7 @@ bool ProjectedGrid::getRangeMatrix(float water_max_height, float water_min_heigh
 	}
 
 	if (intersections.empty()) {
+		puts("No intersections!");
 		return false;
 	} else {
 		float base_dist = 0.f;
@@ -102,6 +103,7 @@ bool ProjectedGrid::getRangeMatrix(float water_max_height, float water_min_heigh
 		// Locate the projector for projected grid
 		glm::vec3 projector_pos;
 		const glm::vec3 cam_pos = m_rendering_camera->getPosition();
+		// Method #1
 		float dist_along_water_normal = distance(m_rendering_camera->getPosition(), m_base_plane);
 		if (dist_along_water_normal >= upper_dist) {
 			projector_pos = cam_pos + plane_normal * projector_height_inc;
@@ -114,6 +116,18 @@ bool ProjectedGrid::getRangeMatrix(float water_max_height, float water_min_heigh
 				projector_pos = cam_pos + dist_above_cam * plane_normal;
 			}
 		}
+		// Method #2
+		float height_in_plane = distance(cam_pos, m_base_plane);
+		bool under_water = (height_in_plane < 0.f);
+		if (height_in_plane < m_options.strength + m_options.elevation) {
+			if (under_water) {
+				projector_pos = cam_pos
+					+ m_lower_bound_plane.getNormal() * (m_options.strength + m_options.elevation - 2 * height_in_plane);
+			} else {
+				projector_pos = cam_pos
+					+ m_lower_bound_plane.getNormal() * (m_options.strength + m_options.elevation - height_in_plane);
+			}
+		}
 
 		// Assert Projector's position is above the water's max height
 		assert(distance(projector_pos, m_base_plane) > upper_dist);
@@ -121,14 +135,6 @@ bool ProjectedGrid::getRangeMatrix(float water_max_height, float water_min_heigh
 		// Assert Projector's position is above the camera's position
 		assert(glm::dot(projector_pos - cam_pos, plane_normal) > 0.f);
 
-		//////////////////////////////////////////////////////////////////
-		// Orient the Projector - That is, have the projector face towards 
-		// a location between 2 end-points. The 1st end-point is computed 
-		// by choosing a point a set number of distance infront of the 
-		// camera and then projecting it down onto the water base plane. 
-		// The 2nd end-point is the intersection of the camera's facing 
-		// vector and the water base plane.
-		//////////////////////////////////////////////////////////////////
 		glm::vec3 projector_tar, aimpoint0, aimpoint1;
 		glm::vec3 cam_dir = m_rendering_camera->getDirection();
 		// Aim the projector at the point where the camera view-vector intersects the plane
@@ -172,7 +178,7 @@ bool ProjectedGrid::getRangeMatrix(float water_max_height, float water_min_heigh
 			x_max = std::max(x_max, p.x);
 			y_max = std::max(y_max, p.y);
 		}
-		printf("x:[%f %f], y:[%f %f]\n", x_min, x_max, y_min, y_max);
+		//printf("x:[%f %f], y:[%f %f]\n", x_min, x_max, y_min, y_max);
 
 		glm::mat4 projector_view_proj_mat_inv = glm::inverse(projector_view_proj_mat);
 
@@ -180,35 +186,8 @@ bool ProjectedGrid::getRangeMatrix(float water_max_height, float water_min_heigh
 									0,	y_max - y_min,	0,	y_min,
 									0,				0,	1,		0,
 									0,				0,	0,		1);
+		//pack = glm::transpose(pack);
 		m_range_matrix = projector_view_proj_mat_inv * pack;
-
-		//
-		//// Transform the 8 bounding coordinates to world coordinates, using the 
-		//// min and max computed for the x and y axes in the Projector's 
-		//// projective space. There's 8 bounding coordinates because of the 
-		//// additional z axis.
-		//
-		//double z_min = -1.0, z_max = 1.0;
-		////
-		//glm::vec3 x0_y0_z0 = transformPoint(projector_view_proj_mat_inv, glm::vec3(x_min, y_min, z_min));
-		//glm::vec3 x0_y0_z1 = transformPoint(projector_view_proj_mat_inv, glm::vec3(x_min, y_min, z_max));
-		////
-		//glm::vec3 x0_y1_z0 = transformPoint(projector_view_proj_mat_inv, glm::vec3(x_min, y_max, z_min));
-		//glm::vec3 x0_y1_z1 = transformPoint(projector_view_proj_mat_inv, glm::vec3(x_min, y_max, z_max));
-		////
-		//glm::vec3 x1_y0_z0 = transformPoint(projector_view_proj_mat_inv, glm::vec3(x_max, y_min, z_min));
-		//glm::vec3 x1_y0_z1 = transformPoint(projector_view_proj_mat_inv, glm::vec3(x_max, y_min, z_max));
-		////
-		//glm::vec3 x1_y1_z0 = transformPoint(projector_view_proj_mat_inv, glm::vec3(x_max, y_max, z_min));
-		//glm::vec3 x1_y1_z1 = transformPoint(projector_view_proj_mat_inv, glm::vec3(x_max, y_max, z_max));
-
-		//// Compute the 4 bounding coordinates on the water base plane for 
-		//// each combination of min and max of x,y pairs. This is done by 
-		//// computing the intersection of the (infinite) lines with the 
-		//// water base plane.
-
-		//glm::vec3 line_vec = x0_y0_z0 - x0_y0_z1;
-
 
 		return true;
 	}
@@ -220,17 +199,37 @@ glm::vec3 ProjectedGrid::getCorner(float u, float v) {
 	return intersection(Line(p_z0, p_z1), m_base_plane);
 }
 
-bool ProjectedGrid::renderGeometry() {
-	glm::vec4 t_corners0 = glm::vec4(getCorner(0.f, 0.f), 1.f);
-	glm::vec4 t_corners1 = glm::vec4(getCorner(1.f, 0.f), 1.f);
-	glm::vec4 t_corners2 = glm::vec4(getCorner(0.f, 1.f), 1.f);
-	glm::vec4 t_corners3 = glm::vec4(getCorner(1.f, 1.f), 1.f);
+glm::vec4 ProjectedGrid::getCorner4(float u, float v) {
+	// this is hacky.. this does take care of the homogenous coordinates in a correct way, 
+	// but only when the plane lies at y=0
+	glm::vec4 origin(u, v, -1.f, 1.f);
+	glm::vec4 direction(u, v, 1.f, 1.f);
 
+	origin = transformPoint(m_range_matrix, origin);
+	direction = transformPoint(m_range_matrix, direction);
+
+	direction -= origin;
+	float l = -origin.y / direction.y;	// assumes the plane is y=0
+	glm::vec4 worldPos = origin + direction * l;
+	return worldPos;
+}
+
+#define INTERPOLATE_VERSION_1
+
+void ProjectedGrid::renderGeometry() {
 	const int sides = m_options.sides;
 	int index = 0;
+
+#ifdef INTERPOLATE_VERSION_1
+	glm::vec4 t_corners0 = getCorner4(0.f, 0.f);
+	glm::vec4 t_corners1 = getCorner4(1.f, 0.f);
+	glm::vec4 t_corners2 = getCorner4(0.f, 1.f);
+	glm::vec4 t_corners3 = getCorner4(1.f, 1.f);
+
 	float u = 0.f, v = 0.f;
 	float du = 1.f / (float)(sides - 1);
 	float dv = 1.f / (float)(sides - 1);
+	//Method #1
 	glm::vec4 result;
 	for (int iv = 0; iv < sides; ++iv) {
 		u = 0.f;
@@ -252,6 +251,27 @@ bool ProjectedGrid::renderGeometry() {
 		}
 		v += dv;
 	}
+#else
+	// #2: Slower version
+	glm::vec3 t_corners0 = getCorner(0.f, 0.f);
+	glm::vec3 t_corners1 = getCorner(1.f, 0.f);
+	glm::vec3 t_corners2 = getCorner(0.f, 1.f);
+	glm::vec3 t_corners3 = getCorner(1.f, 1.f);
+	for (int iv = 0; iv < sides; ++iv) {
+		for (int iu = 0; iu < sides; ++iu) {
+			float u = (float)iu / (float)(sides - 1);
+			float v = (float)iv / (float)(sides - 1);
+			glm::vec3 p = getCorner(u, v);
+			m_vertices[index].x = p.x;
+			m_vertices[index].z = p.z;
+			m_vertices[index].y = 0.f;	// @hack
+			++index;
+		}
+	}
+#endif
+
+	glPushAttrib(GL_CURRENT_COLOR);
+	glColor3f(0.f, 1.f, 0.f);
 
 	// Draw the grid
 	glBegin(GL_POINTS);
@@ -259,6 +279,6 @@ bool ProjectedGrid::renderGeometry() {
 		glVertex3fv(glm::value_ptr(m_vertices[i]));
 	}
 	glEnd();
-
-	return true;
+	
+	glPopAttrib();
 }

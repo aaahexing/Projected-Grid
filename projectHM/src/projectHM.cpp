@@ -20,7 +20,7 @@ const int screenHeight = 720;
 
 Scene scene;
 GLRenderer gl_renderer;
-Camera camera(glm::vec3(0, 2, 6), -PI / 30, PI);
+Camera camera(glm::vec3(0, 3, 6), -PI / 30, PI);
 
 bool key_down[256];
 int pre_x, pre_y, button_mask = 0;
@@ -30,30 +30,28 @@ WindowsTimer walk_timer;
 const float walk_speed = 0.004f;
 const float mouse_speed = 0.001f;
 
-// Helper functions for debugging
-inline void debugVec3(int i, const glm::vec3 &v) {
-	printf("%d : %f %f %f\n", i, v.x, v.y, v.z);
+inline void drawCamera(const Camera &c) {
+	const glm::vec3 cam_pos = c.getPosition();
+	const glm::vec3 cam_dir = c.getDirection();
+	const glm::vec3 cam_tar = cam_pos + cam_dir;
+	glPushMatrix();
+	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	glTranslatef(cam_pos.x, cam_pos.y, cam_pos.z);
+	glColor3f(1.f, 1.f, 1.f);
+	glutSolidSphere(0.1f, 100.f, 100.f);
+	glPushAttrib(GL_CURRENT_COLOR);
+	glBegin(GL_LINES);
+	glColor3f(1.f, 0.f, 0.f);
+	glVertex3fv(glm::value_ptr(cam_pos - cam_pos));
+	glVertex3fv(glm::value_ptr(cam_tar - cam_pos));
+	glEnd();
+	glPopMatrix();
+	glPopAttrib();
 }
 
-inline void debugVec4(int i, const glm::vec4 &v) {
-	printf("%d : %f %f %f %f\n", i, v.x, v.y, v.z, v.w);
-}
-
-inline void debugMat4(const float* m) {
-	for (int i = 0; i < 4; ++i) {
-		for (int j = 0; j < 4; ++j) {
-			printf("%f ", m[i * 4 + j]);
-		}
-		puts("");
-	}
-}
-
-inline void debugMat4(const glm::mat4 &m) {
-	debugMat4(glm::value_ptr(m));
-}
-
+// Projected grid for debugging
 ProjectedGrid proj_grid(
-	Plane(glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f, 1.f, 0.f)),
+	Plane(glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)),
 	&camera,
 	ProjectedGridOptions()
 	);
@@ -71,9 +69,9 @@ void renderProjectedGrids() {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(glm::value_ptr(model_view));
 
+	// Use the projected grid
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-	if (proj_grid.getRangeMatrix(1.f, -1.f, 3.f)) {
+	if (proj_grid.getRangeMatrix(0.2f, -0.1f, 0.5f)) {
 		proj_grid.renderGeometry();
 	}
 

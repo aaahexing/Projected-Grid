@@ -78,7 +78,9 @@ public:
 
 	glm::vec3 getCorner(float u, float v);
 
-	bool renderGeometry();
+	glm::vec4 getCorner4(float u, float v);
+
+	void renderGeometry();
 
 	// for debugging
 };
