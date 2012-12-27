@@ -32,5 +32,8 @@ using std::endl;
 #include "glm/gtx/matrix_operation.hpp"
 
 const float PI = acos(-1.0);
+const float Infinity = std::numeric_limits<float>::infinity();
+
+#define projectHM_DEBUG
 
 #endif	/* __PROJECTHM_PCH_H__ */

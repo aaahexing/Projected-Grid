@@ -3,9 +3,16 @@
 
 class Camera {
 public:
+	Camera(const Camera &c) {
+		*this = c;
+		updateViewMatrix();
+		updateProjectionMatrix();
+	}
 	Camera(const glm::vec3 &_position = glm::vec3(0.f), float h_angle = PI, float v_angle = 0.f)
 		: m_position(_position), m_zNear(0.001f), m_zFar(100.f) {
-			setRotation(v_angle, h_angle);
+		setRotation(v_angle, h_angle);
+		updateViewMatrix();
+		updateProjectionMatrix();
 	}
 
 	// Modifiations on the projection matrix
@@ -43,6 +50,12 @@ public:
 	}
 	inline float getClipHeight() const {
 		return m_zNear * tan(m_fov / 180.0f * PI * 0.5f) * 2;
+	}
+	inline glm::vec3 getPosition() const {
+		return m_position;
+	}
+	inline glm::vec3 getDirection() const {
+		return m_direction_tar;
 	}
 
 	// Modifications on the view matrix
@@ -84,12 +97,18 @@ public:
 		m_rotation = glm::vec2(h_angle, v_angle);
 		updateViewMatrix();
 	}
+	inline void setDirection(const glm::vec3 &_direction) {
+		glm::vec3 dir_norm = glm::normalize(_direction);
+		m_rotation.x = atan2(dir_norm.z, dir_norm.x);
+		m_rotation.y = asin(dir_norm.y);
+		updateViewMatrix();
+	}
 
 	void updateViewMatrix();
 	void updateProjectionMatrix();
 	const glm::mat4& getProjectionMatrix();
 	const glm::mat4& getViewMatrix();
-	const glm::mat4& getMVPMatrix();
+	const glm::mat4 getViewProjectionMatrix();
 	void saveParasToFile(const char *filename) const;
 	void loadParasFromFile(const char *filename);
 	// For GPU ray propagation

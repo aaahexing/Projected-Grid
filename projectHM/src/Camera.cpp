@@ -33,7 +33,7 @@ const glm::mat4& Camera::getViewMatrix() {
 	return m_worldToCamera;
 }
 
-const glm::mat4& Camera::getMVPMatrix() {
+const glm::mat4 Camera::getViewProjectionMatrix() {
 	return m_cameraToScreen * m_worldToCamera;
 }
 
