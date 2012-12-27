@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <sstream>

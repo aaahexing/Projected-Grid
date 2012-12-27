@@ -72,9 +72,9 @@ inline glm::vec3 intersection(const Line &l, const Plane &p) {
 	return ret;
 }
 
-// Check whether a point is between two planes
-inline bool between(const glm::vec3 &p, const Plane &p0, const Plane &p1) {
-	return (p0.a * p.x + p0.b * p.y + p0.c * p.z + p0.d) * (p1.a * p.x + p1.b * p.y + p1.c * p.z + p1.d) < -EPS;
+// Get the distance from a point to a plane
+inline float distance(const glm::vec3 &p, const Plane &pl) {
+	return p.x * pl.a + p.y * pl.b + p.z * pl.c;
 }
 
 #endif	/* __SHAPE_H__ */

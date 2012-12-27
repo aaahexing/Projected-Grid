@@ -108,7 +108,7 @@ public:
 	void updateProjectionMatrix();
 	const glm::mat4& getProjectionMatrix();
 	const glm::mat4& getViewMatrix();
-	const glm::mat4 getViewProjectionMatrix();
+	const glm::mat4 getViewProjectionMatrix() const;
 	void saveParasToFile(const char *filename) const;
 	void loadParasFromFile(const char *filename);
 	// For GPU ray propagation
