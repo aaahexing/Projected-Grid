@@ -39,6 +39,12 @@
     <ClInclude Include="include\ProjectedGrid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="include\GLRenderControler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\GLDebugingHelpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Camera.cpp">
@@ -57,6 +63,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\ProjectedGrid.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\GLRenderControler.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

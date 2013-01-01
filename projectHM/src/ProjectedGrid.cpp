@@ -92,71 +92,43 @@ bool ProjectedGrid::getRangeMatrix(float water_max_height, float water_min_heigh
 		puts("No intersections!");
 		return false;
 	} else {
-		float base_dist = 0.f;
-		float upper_dist = base_dist + water_max_height;
-		float lower_dist = base_dist + water_min_height;
 		const glm::vec3 plane_normal = m_base_plane.getNormal();
-		// Project all the intersections to the base plane
-		for (int i = 0; i < intersections.size(); ++i) {
-			intersections[i] -= plane_normal * distance(intersections[i], m_base_plane);
-		}
-		// Locate the projector for projected grid
-		glm::vec3 projector_pos;
 		const glm::vec3 cam_pos = m_rendering_camera->getPosition();
-		// Method #1
-		float dist_along_water_normal = distance(m_rendering_camera->getPosition(), m_base_plane);
-		if (dist_along_water_normal >= upper_dist) {
-			projector_pos = cam_pos + plane_normal * projector_height_inc;
-		} else {
-			if (dist_along_water_normal <= lower_dist) {
-				float reflected_dist = base_dist - distance(cam_pos, m_base_plane);
-				projector_pos = cam_pos + (projector_height_inc + base_dist + reflected_dist) * plane_normal;
-			} else {
-				float dist_above_cam = projector_height_inc + upper_dist - distance(cam_pos, m_base_plane);
-				projector_pos = cam_pos + dist_above_cam * plane_normal;
-			}
-		}
-		// Method #2
-		float height_in_plane = distance(cam_pos, m_base_plane);
-		bool under_water = (height_in_plane < 0.f);
-		if (height_in_plane < m_options.strength + m_options.elevation) {
-			if (under_water) {
-				projector_pos = cam_pos
-					+ m_lower_bound_plane.getNormal() * (m_options.strength + m_options.elevation - 2 * height_in_plane);
-			} else {
-				projector_pos = cam_pos
-					+ m_lower_bound_plane.getNormal() * (m_options.strength + m_options.elevation - height_in_plane);
-			}
-		}
-
-		// Assert Projector's position is above the water's max height
-		assert(distance(projector_pos, m_base_plane) > upper_dist);
-		
-		// Assert Projector's position is above the camera's position
-		assert(glm::dot(projector_pos - cam_pos, plane_normal) > 0.f);
-
-		glm::vec3 projector_tar, aimpoint0, aimpoint1;
-		glm::vec3 cam_dir = m_rendering_camera->getDirection();
-		// Aim the projector at the point where the camera view-vector intersects the plane
-		// if the camera is aimed away from the plane, mirror it's view-vector against the plane
-		if (glm::dot(plane_normal, cam_dir) < 0.f || glm::dot(plane_normal, cam_pos) < 0.f) {
-				aimpoint0 = intersection(Line(cam_pos, cam_pos + cam_dir), m_base_plane);
-		} else {
-			glm::vec3 flipped = cam_dir - plane_normal * 2.f * glm::dot(cam_dir, plane_normal);
-			aimpoint0 = intersection(Line(cam_pos, cam_pos + flipped), m_base_plane);
-		}
-
-		// force the point the camera is looking at in a plane, and have the projector look at it
-		// works well against horizon, even when camera is looking upwards
-		// doesn't work straight down/up
-		float af = fabs(glm::dot(plane_normal, cam_dir));
-		//af = 1 - (1-af)*(1-af)*(1-af)*(1-af)*(1-af);
-		//aimpoint2 = (rendering_camera->position + rendering_camera->zfar * rendering_camera->forward);
-		aimpoint1 = (cam_pos + 10.0f * cam_dir);
-		aimpoint1 = aimpoint1 - plane_normal * glm::dot(aimpoint1, plane_normal);
-		// fade between aimpoint & aimpoint2 depending on view angle
-		projector_tar = aimpoint0 * af + aimpoint1 * (1.0f - af);
+		const glm::vec3 cam_dir = m_rendering_camera->getDirection();
 		// Set the projector
+		glm::vec3 projector_pos = cam_pos;
+		float height_in_plane = distance(cam_pos, m_base_plane);
+		float height_bound = m_options.strength + m_options.elevation;
+		bool under_water = height_in_plane < 0.f;
+		// If the camera is too close to the upper plane or too low
+		if (height_in_plane < height_bound) {
+			if (under_water) {
+				// Reflected the position
+				projector_pos += plane_normal * (height_bound - 2 * height_in_plane);
+			} else {
+				// Move the position upwards
+				projector_pos += plane_normal * (height_bound - height_in_plane);
+			}
+		}
+		glm::vec3 aim_point0, aim_point1;
+		// If the camera is aimed away from the plane or located on the plane, simply mirror it's
+		//	view-vector against the plane
+		if (planeDotCoord(m_base_plane, cam_pos) > 0.f && planeDotNormal(m_base_plane, cam_dir) > 0.f) {
+			glm::vec3 flipped_dir = cam_dir - 2.f * plane_normal * glm::dot(plane_normal, cam_dir);
+			aim_point0 = intersection(Line(cam_pos, cam_pos + flipped_dir), m_base_plane);
+		} else {
+			aim_point0 = intersection(Line(cam_pos, cam_pos + cam_dir), m_base_plane);
+		}
+		// If there's no intersections between the camera's view-vector and the plane,
+		//	hack the target vertices
+		if (abs(planeDotNormal(m_base_plane, cam_dir)) <= 1e-6) {
+			aim_point0 = cam_pos + cam_dir;
+		}
+		aim_point1 = cam_pos + 10.f * cam_dir;
+		aim_point1 = aim_point1 - plane_normal * glm::dot(aim_point1, plane_normal);
+		float af = fabs(glm::dot(plane_normal, cam_dir));
+		// Fade between aim_point0 & aim_point1 depending on view angle
+		glm::vec3 projector_tar = aim_point0 * af + aim_point1 * (1.f - af);
 		if (m_projecting_camera) {
 			delete m_projecting_camera;
 			m_projecting_camera = NULL;
@@ -169,6 +141,10 @@ bool ProjectedGrid::getRangeMatrix(float water_max_height, float water_min_heigh
 		glm::mat4 projector_view_proj_mat = m_projecting_camera->getViewProjectionMatrix();
 		// @todo: need definition of 'infinity'
 		float x_min = 1e20, y_min = 1e20, x_max = -1e20, y_max = -1e20;
+		// Project all the intersections to the base plane
+		for (int i = 0; i < intersections.size(); ++i) {
+			intersections[i] -= plane_normal * distance(intersections[i], m_base_plane);
+		}
 		// Transform all the intersections form world-space to projector's projection-space
 		for (int i = 0; i < intersections.size(); ++i) {
 			intersections[i] = transformPoint(projector_view_proj_mat, intersections[i]);
@@ -186,7 +162,7 @@ bool ProjectedGrid::getRangeMatrix(float water_max_height, float water_min_heigh
 									0,	y_max - y_min,	0,	y_min,
 									0,				0,	1,		0,
 									0,				0,	0,		1);
-		//pack = glm::transpose(pack);
+		pack = glm::transpose(pack);
 		m_range_matrix = projector_view_proj_mat_inv * pack;
 
 		return true;

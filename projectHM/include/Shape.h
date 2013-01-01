@@ -77,4 +77,16 @@ inline float distance(const glm::vec3 &p, const Plane &pl) {
 	return p.x * pl.a + p.y * pl.b + p.z * pl.c;
 }
 
+// a*x + b*y + c*z + d*0
+// Calculating the angle between the normal of the plane, and another normal
+inline float planeDotNormal(const Plane &p, const glm::vec3 &d) {
+	return p.a * d.x + p.b * d.y + p.c * d.z;
+}
+
+// a*x + b*y + c*z + d*1
+// Determining the plane's relationship with a coordinate in 3D space
+inline float planeDotCoord(const Plane &p, const glm::vec3 &d) {
+	return p.a * d.x + p.b * d.y + p.c * d.z + p.d * 1.f;
+}
+
 #endif	/* __SHAPE_H__ */

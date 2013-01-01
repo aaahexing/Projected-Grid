@@ -50,12 +50,12 @@ class Camera;
 
 struct ProjectedGridOptions {
 	int sides;
+	float strength;		// Scale of displacement
+	float elevation;	// Maximum height
 	bool smooth;
-	float strength;
-	float elevation;
 public:
-	ProjectedGridOptions()
-		: sides(256), strength(35.0), elevation(50.0), smooth(false) {}
+	ProjectedGridOptions(int _sides = 256, float _strength = 0.1f, float _elevation = 0.1f, bool _smooth = false)
+		: sides(_sides), strength(_strength), elevation(_elevation), smooth(_smooth) {}
 };
 
 class ProjectedGrid {

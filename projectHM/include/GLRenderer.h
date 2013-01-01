@@ -5,6 +5,7 @@
 
 class Scene;
 class CGEffectManager;
+class GLRenderControler;
 
 class GLRenderer : public Renderer {
 public:
@@ -15,14 +16,16 @@ public:
 	inline void setScene(Scene *_scene) {
 		m_scene = _scene;
 	}
+	inline void setStatesControler(GLRenderControler *_controler) {
+		m_render_controler = _controler;
+	}
 
-	void switchWireframe();
 	void useNextTechnique();
 
 protected:
 	Scene *m_scene;
-	bool m_wireframe;
 	CGEffectManager *m_effect_manager;
+	GLRenderControler *m_render_controler;
 };
 
 #endif	/* __GLRENDERER_H__ */

@@ -78,7 +78,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="include\Camera.h" />
+    <ClInclude Include="include\GLDebugingHelpers.h" />
     <ClInclude Include="include\GLRenderer.h" />
+    <ClInclude Include="include\GLRenderControler.h" />
     <ClInclude Include="include\ProjectedGrid.h" />
     <ClInclude Include="include\projectHM_PCH.h" />
     <ClInclude Include="include\Renderer.h" />
@@ -93,6 +95,7 @@
     <ClCompile Include="src\GLRenderer.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\GLRenderControler.cpp" />
     <ClCompile Include="src\ProjectedGrid.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Use</PrecompiledHeader>
     </ClCompile>

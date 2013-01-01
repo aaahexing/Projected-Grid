@@ -14,13 +14,22 @@
 #include "Transform.h"
 #include "GLRenderer.h"
 #include "ProjectedGrid.h"
+#include "GLRenderControler.h"
+
+// -------------------------
+// Hack parameters
+// -------------------------
+int hack_display = 0;
+int hack_display_n = 2;
 
 const int screenWidth = 1280;
 const int screenHeight = 720;
 
 Scene scene;
 GLRenderer gl_renderer;
-Camera camera(glm::vec3(0, 3, 6), -PI / 30, PI);
+GLRenderControler controler;
+Camera camera(glm::vec3(0, 2, 6), 0, PI);
+//Camera camera(glm::vec3(0, 1, 6), -PI / 30, PI);
 
 bool key_down[256];
 int pre_x, pre_y, button_mask = 0;
@@ -53,13 +62,13 @@ inline void drawCamera(const Camera &c) {
 ProjectedGrid proj_grid(
 	Plane(glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 1.f, 0.f)),
 	&camera,
-	ProjectedGridOptions()
+	ProjectedGridOptions(256, 0.1f, 0.1f)
 	);
 
 void renderProjectedGrids() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	glViewport(0, 0, screenWidth, screenWidth);
+	glViewport(0, 0, screenWidth, screenHeight);
 	glMatrixMode(GL_PROJECTION);
 	glm::mat4 projection_mat = camera.getProjectionMatrix();
 	glLoadMatrixf(glm::value_ptr(projection_mat));
@@ -68,6 +77,8 @@ void renderProjectedGrids() {
 	glm::mat4 model_view = view_mat * model_mat;
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(glm::value_ptr(model_view));
+
+	glPolygonMode(GL_FRONT_AND_BACK, controler.isWireframe() ? GL_LINE : GL_FILL);
 
 	// Use the projected grid
 	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -80,10 +91,11 @@ void renderProjectedGrids() {
 }
 
 void displayCallback() {
-	renderProjectedGrids();
-	/*
-	gl_renderer.render(NULL);
-	*/
+	if (hack_display == 0) {
+		renderProjectedGrids();
+	} else {
+		gl_renderer.render(NULL);
+	}
 }
 
 void idleCallback() {
@@ -145,13 +157,17 @@ void keyboardCallback(unsigned char key, int /*x*/, int /*y*/) {
 		gl_renderer.useNextTechnique();
 		break;
 	case '2':
-		gl_renderer.switchWireframe();
+		controler.switchWireframe();
 		break;
 	case 'S':
 		camera.saveParasToFile("../data/scenes/camera.cfg");
 		break;
 	case 'L':
 		camera.loadParasFromFile("../data/scenes/camera.cfg");
+		break;
+	// For hack states control
+	case 'h':
+		hack_display = (hack_display + 1) % hack_display_n;
 		break;
 	default:
 		break;
@@ -195,6 +211,8 @@ void goIntoWorld(const char *scene_file_name, int argc, char *argv[]) {
 	gl_renderer.setScene(&scene);
 	gl_renderer.setCamera(&camera);
 	gl_renderer.setWindow(screenWidth, screenHeight);
+	// Set the controler for rendering
+	gl_renderer.setStatesControler(&controler);
 	// Init the camera
 	camera.setFOV(45.f);
 	camera.setFarClip(100.f);

@@ -99,7 +99,7 @@ public:
 	}
 	inline void setDirection(const glm::vec3 &_direction) {
 		glm::vec3 dir_norm = glm::normalize(_direction);
-		m_rotation.x = atan2(dir_norm.z, dir_norm.x);
+		m_rotation.x = atan2(dir_norm.x, dir_norm.z);
 		m_rotation.y = asin(dir_norm.y);
 		updateViewMatrix();
 	}

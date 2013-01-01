@@ -9,13 +9,14 @@
 
 #include "Scene.h"
 #include "Camera.h"
+#include "GLRenderControler.h"
 
 void GLRenderer::init() {
 	m_scene = NULL;
 	m_camera = NULL;
 	m_framebuffer = NULL;
-	// Rendering parameters
-	m_wireframe = false;
+	// Controler for rendering
+	m_render_controler = NULL;
 	// Load effects for OpenGL preview
 	m_effect_manager = new CGEffectManager();
 	m_effect_manager->registerStates();
@@ -36,7 +37,7 @@ void GLRenderer::render(void (__cdecl *render_callback)()) {
 	glMatrixMode(GL_MODELVIEW);
 	glLoadMatrixf(glm::value_ptr(model_view));
 
-	glPolygonMode(GL_FRONT_AND_BACK, m_wireframe ? GL_LINE : GL_FILL);
+	glPolygonMode(GL_FRONT_AND_BACK, m_render_controler->isWireframe() ? GL_LINE : GL_FILL);
 
 	// Render scene
 	for (m_effect_manager->techniqueInitFirstPass(); m_effect_manager->techniqueRunning(); m_effect_manager->techniqueNextPass()) {
@@ -53,10 +54,6 @@ void GLRenderer::render(void (__cdecl *render_callback)()) {
 
 void GLRenderer::shutdown() {
 	delete m_effect_manager;
-}
-
-void GLRenderer::switchWireframe() {
-	m_wireframe = !m_wireframe;
 }
 
 void GLRenderer::useNextTechnique() {
