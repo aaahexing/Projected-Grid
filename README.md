@@ -1,6 +1,7 @@
-# Projected Grid #
+Projected-Grid
+==============
 
-It's a full **OpenGL** implementation of the famous 'projected grid' technique in ocean rendering.
+OpenGL Implementation of 'projected grid' technique in ocean rendering.
 
 The original concept comes out of Claes Johanson's master thesis which can be found [here](http://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/). 
 
