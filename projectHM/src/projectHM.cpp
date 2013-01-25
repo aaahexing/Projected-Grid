@@ -6,13 +6,11 @@
 #include <gl/glut.h>
 
 #include "../../hxlib/include/WindowsTimer.h"
-#include "../../hxlib/include/OpenGLWrapper.h"
 
 #include "Scene.h"
 #include "Shape.h"
 #include "Camera.h"
 #include "Transform.h"
-#include "GLRenderer.h"
 #include "ProjectedGrid.h"
 #include "GLRenderControler.h"
 
@@ -26,10 +24,8 @@ const int screenWidth = 1280;
 const int screenHeight = 720;
 
 Scene scene;
-GLRenderer gl_renderer;
 GLRenderControler controler;
 Camera camera(glm::vec3(0, 2, 6), 0, PI);
-//Camera camera(glm::vec3(0, 1, 6), -PI / 30, PI);
 
 bool key_down[256];
 int pre_x, pre_y, button_mask = 0;
@@ -91,11 +87,7 @@ void renderProjectedGrids() {
 }
 
 void displayCallback() {
-	if (hack_display == 0) {
-		renderProjectedGrids();
-	} else {
-		gl_renderer.render(NULL);
-	}
+	renderProjectedGrids();
 }
 
 void idleCallback() {
@@ -143,8 +135,6 @@ void mouseCallback(int button, int state, int x, int y) {
 }
 
 void destroyWorld() {
-	// Remember to call it to avoid memory leaks
-	gl_renderer.shutdown();
 }
 
 void keyboardCallback(unsigned char key, int /*x*/, int /*y*/) {
@@ -152,9 +142,6 @@ void keyboardCallback(unsigned char key, int /*x*/, int /*y*/) {
 	case 27:
 		destroyWorld();
 		exit(0);
-		break;
-	case '1':
-		gl_renderer.useNextTechnique();
 		break;
 	case '2':
 		controler.switchWireframe();
@@ -206,13 +193,6 @@ void goIntoWorld(const char *scene_file_name, int argc, char *argv[]) {
 	glutKeyboardUpFunc(keyboardUpCallback);
 	glutIdleFunc(idleCallback);
 
-	// Init the renderer
-	gl_renderer.init();
-	gl_renderer.setScene(&scene);
-	gl_renderer.setCamera(&camera);
-	gl_renderer.setWindow(screenWidth, screenHeight);
-	// Set the controler for rendering
-	gl_renderer.setStatesControler(&controler);
 	// Init the camera
 	camera.setFOV(45.f);
 	camera.setFarClip(100.f);
